@@ -2,11 +2,12 @@ import asyncio
 
 from .creature import EmotionEngine, MultiModalPerception
 from .world import NarrationEngine
+from .config import CONFIG
 
 
 async def main():
     # Initialize components
-    # config = load_config("config/agent_config.yaml")
+    config = CONFIG
 
     perception = MultiModalPerception(config)
     memory = EpisodicMemory("memory.db")

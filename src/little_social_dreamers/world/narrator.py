@@ -1,5 +1,7 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+from typing import Dict
+from ..creature.core.base import CognitiveModule
 
 
 class NarrationEngine(CognitiveModule):

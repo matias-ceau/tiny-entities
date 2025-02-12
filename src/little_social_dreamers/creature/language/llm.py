@@ -1,6 +1,8 @@
 # cognitive_agent/language/llm.py
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+from typing import Dict
+from ..core.base import CognitiveModule
 
 
 class NarrationEngine(CognitiveModule):
