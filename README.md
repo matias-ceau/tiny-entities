@@ -1,3 +1,4 @@
+```text
 # Project Structure
 cognitive_agent/
 ├── pyproject.toml           # Project dependencies and metadata
@@ -59,3 +60,4 @@ cognitive_agent/
 └── examples/
     ├── single_agent.py
     └── basic_interaction.py
+```
