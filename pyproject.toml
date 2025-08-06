@@ -1,24 +1,35 @@
 [project]
-name = "little_social_dreamers"
+name = "tiny-entities"
 version = "0.1.0"
-description = "Add your description here"
+description = "Emergent artificial life simulation with mood-based cognition"
 readme = "README.md"
-authors = [
-    { name = "Matias Ceau", email = "matias@ceau.net" }
-]
-requires-python = ">=3.12"
+requires-python = ">=3.9"
 dependencies = [
-    "asyncio>=3.4.3",
-    "huggingface>=0.0.1",
-    "numpy>=2.2.2",
-    "torch>=2.6.0",
-    "torchaudio>=2.6.0",
-    "transformers>=4.48.2",
+    "numpy>=1.24.0",
+    "aiohttp>=3.8.0",
+    "python-dotenv>=1.0.0",
+    "matplotlib>=3.6.0",
+    "pygame>=2.5.0",
+    "openai>=1.0.0",
+    "anthropic>=0.3.0",
+    "huggingface-hub>=0.19.0",
+    "pandas>=2.0.0",
+    "scipy>=1.10.0",
+    "rich>=13.0.0",
 ]
 
-[project.scripts]
-lsd-cli = "little_social_dreamers:main"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-watch",
+    "black",
+    "flake8",
+]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
