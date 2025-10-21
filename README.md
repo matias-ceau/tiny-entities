@@ -31,6 +31,15 @@ uv pip install -e ".[dev]"
 cp .env.example .env
 ```
 
+### Quick Demo
+
+Run the comprehensive demo to see all features:
+```bash
+python demo.py
+```
+
+This demonstrates console mode, visualization, and analysis tools in one go.
+
 ### Run
 
 Basic simulation (console output):
