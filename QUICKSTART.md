@@ -17,12 +17,23 @@ cp .env.example .env
 
 ## 2. Configure API Keys (Optional)
 
-Edit `.env` and add any API keys you have:
-- `OPENROUTER_API_KEY` - For LLM-based action selection
-- `ANTHROPIC_API_KEY` - For emergence analysis
-- `HUGGINGFACE_API_KEY` - For free models
+Edit `.env` and add your API keys for LLM-enhanced features:
 
-The simulation works without API keys using rule-based behaviors.
+**Recommended**: Use **OpenRouter** (single API key for multiple models):
+```bash
+OPENROUTER_API_KEY=your_key_here
+```
+Get your key at [OpenRouter](https://openrouter.ai/)
+
+**Default Models** (automatically used via OpenRouter):
+- Action model: `meta-llama/llama-3.1-8b-instruct:free` (free tier)
+- Analysis model: `anthropic/claude-3.5-sonnet` (latest Claude)
+
+**Alternative providers**:
+- `ANTHROPIC_API_KEY` - Direct Anthropic API
+- `HUGGINGFACE_API_KEY` - HuggingFace models
+
+The simulation works without API keys using rule-based behaviors. With OpenRouter and free tier models, you can experiment with LLM features at no cost!
 
 ## 3. Run the Simulation
 
