@@ -24,10 +24,8 @@
 pip install -e ".[dev]"
 cp .env.example .env
 
-# Or using uv (faster)
-uv venv
-source .venv/bin/activate
-uv pip install -e ".[dev]"
+# Or using uv (recommended - faster and more reliable)
+uv sync
 cp .env.example .env
 ```
 
@@ -35,6 +33,10 @@ cp .env.example .env
 
 Run the comprehensive demo to see all features:
 ```bash
+# With uv (recommended)
+uv run python demo.py
+
+# Or if you used pip
 python demo.py
 ```
 
@@ -44,16 +46,28 @@ This demonstrates console mode, visualization, and analysis tools in one go.
 
 Basic simulation (console output):
 ```bash
+# With uv (recommended)
+uv run python examples/basic_simulation.py --creatures 8 --steps 5000
+
+# Or if you used pip
 python examples/basic_simulation.py --creatures 8 --steps 5000
 ```
 
 With visualization (requires display):
 ```bash
+# With uv (recommended)
+uv run python examples/basic_simulation.py --visualize --creatures 8
+
+# Or if you used pip
 python examples/basic_simulation.py --visualize --creatures 8
 ```
 
 Headless mode (generates PNG snapshots):
 ```bash
+# With uv (recommended)
+uv run python examples/headless_visualization.py --creatures 10 --steps 1000
+
+# Or if you used pip
 python examples/headless_visualization.py --creatures 10 --steps 1000
 ```
 
