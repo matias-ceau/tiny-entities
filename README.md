@@ -93,6 +93,19 @@ uv run python examples/headless_visualization.py --creatures 10 --steps 1000
 python examples/headless_visualization.py --creatures 10 --steps 1000
 ```
 
+## Running Tests
+
+Ensure the development dependencies (including scientific libraries such as `numpy`) are installed before executing the test
+suite:
+
+```bash
+uv sync --all-extras
+uv run pytest
+```
+
+`uv sync` provisions the shared virtual environment, so `uv run` will automatically reuse the resolved packages when executing
+`pytest`.
+
 ## Repository Layout
 
 - `src/` – Primary simulation engine and modules
