@@ -3,16 +3,17 @@
 ## 1. Setup with uv
 
 ```bash
-# Create and activate virtual environment
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Sync dependencies from lock file (production dependencies only)
+uv sync
 
-# Install the package
-uv pip install -e ".[dev]"
+# OR sync with dev dependencies for development
+uv sync --all-extras
 
 # Copy environment file
 cp .env.example .env
 ```
+
+**What happens:** `uv sync` creates a virtual environment (if needed) and installs all dependencies from `uv.lock`. No need to manually activate the environment - use `uv run` to run commands.
 
 ## 2. Configure API Keys (Optional)
 
@@ -27,22 +28,22 @@ The simulation works without API keys using rule-based behaviors.
 
 ### Basic run:
 ```bash
-python -m src.simulation.main_loop
+uv run python -m src.simulation.main_loop
 ```
 
 ### With visualization (requires pygame):
 ```bash
-python examples/basic_simulation.py --visualize
+uv run python examples/basic_simulation.py --visualize
 ```
 
 ### Custom parameters:
 ```bash
-python examples/basic_simulation.py --creatures 10 --steps 5000
+uv run python examples/basic_simulation.py --creatures 10 --steps 5000
 ```
 
 ### Generate analysis plots:
 ```bash
-python examples/analysis_with_plots.py --creatures 8 --steps 2000
+uv run python examples/analysis_with_plots.py --creatures 8 --steps 2000
 ```
 
 This creates detailed matplotlib plots showing mood evolution, trajectories, and patterns.
@@ -89,11 +90,8 @@ If you get import errors:
 # Make sure you're in the project root
 cd /path/to/tiny-entities
 
-# Activate the environment
-source .venv/bin/activate
-
-# Reinstall
-uv pip install -e ".[dev]"
+# Resync dependencies
+uv sync
 ```
 
 If pygame doesn't work:
@@ -102,6 +100,16 @@ If pygame doesn't work:
 # Ubuntu/Debian:
 sudo apt-get install python3-dev python3-pygame
 
-# Then reinstall
-uv pip install pygame
+# Then add pygame (this updates pyproject.toml and uv.lock)
+uv add pygame
+```
+
+### Alternative: Using pip instead of uv
+
+If you prefer to use pip:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+python examples/basic_simulation.py --visualize
 ```
