@@ -8,25 +8,27 @@ This guide explains how to understand the various visualizations produced by Tin
 
 ### Elements
 
-1. **Grid World** - The dark background represents empty space
-2. **Green Squares** - Food resources that creatures can consume
-3. **Gray Squares** - Obstacles that block movement
-4. **Colored Circles** - Creatures (color indicates mood)
+1. **Grid World** - The dark blue-black background represents empty space
+2. **Muted Green Squares** - Food resources that creatures can consume (improved readability)
+3. **Light Gray Squares** - Obstacles that block movement
+4. **White-Outlined Colored Circles** - Creatures with white borders for high visibility (color indicates mood)
 5. **Blue/Red Halos** - Sound waves propagating through space
 6. **Info Panel** - Bottom bar shows statistics
+7. **Color Legend** - Toggle with L or K key to show/hide the color key explaining all elements
 
 ### Creature Colors
 
-Creature color reflects their emotional state:
+Creature color reflects their emotional state with improved brightness for better visibility:
 
 - **Red Channel (Brightness)** - Arousal level (how excited/active)
 - **Green vs Blue** - Valence (positive/happy vs negative/sad mood)
+- **White Outline** - All creatures have a white border for easy identification
 
 Examples:
-- Bright Red-Green = Happy & Excited
-- Dim Blue-Gray = Sad & Calm
-- Bright Red = Aroused but Neutral
-- Dull Red-Green = Happy but Calm
+- Bright Yellow-Green with White Border = Happy & Excited
+- Dim Purple-Blue with White Border = Sad & Calm
+- Bright Orange-Red = Aroused but Neutral
+- Moderate Yellow-Green = Happy but Calm
 
 ### Sound Visualization
 
@@ -123,6 +125,7 @@ python examples/basic_simulation.py --visualize --creatures 10
 Controls:
 - **SPACE** - Pause/Resume
 - **ESC** - Quit
+- **L or K** - Toggle color legend on/off
 
 ### Headless Mode (without display)
 
@@ -218,7 +221,20 @@ ffmpeg -framerate 10 -pattern_type glob -i 'snapshot_*.png' -c:v libx264 simulat
 
 ### Custom Coloring
 
-Edit `src/simulation/visualization.py` in the `_draw_world` method to change creature coloring logic.
+The visualization now uses an improved color palette for better readability:
+- Food uses a muted green (80, 140, 60) instead of bright green for reduced eye strain
+- Creatures have white outlines for immediate visibility
+- Background uses a dark blue-black for better contrast
+- All colors are defined in a structured palette dictionary in `src/simulation/visualization.py`
+
+You can further customize colors by editing the `self.colors` dictionary in the `SimulationVisualizer.__init__` method.
+
+### Color Legend
+
+Press **L** or **K** during visualization to toggle the color legend on/off. The legend shows:
+- All element colors (empty space, food, obstacles, creatures, sounds)
+- Example creature moods with their corresponding colors
+- The legend appears on the right side of the screen with a semi-transparent background
 
 ### Adding Overlays
 
