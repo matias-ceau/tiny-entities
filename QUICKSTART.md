@@ -40,21 +40,40 @@ python examples/basic_simulation.py --visualize
 python examples/basic_simulation.py --creatures 10 --steps 5000
 ```
 
+### Generate analysis plots:
+```bash
+python examples/analysis_with_plots.py --creatures 8 --steps 2000
+```
+
+This creates detailed matplotlib plots showing mood evolution, trajectories, and patterns.
+
 ## 4. What to Expect
 
-- Creatures start with random positions
-- They explore, eat food, make sounds
+- Creatures start with random positions and neutral mood
+- They explore, eat food, and make sounds
 - Mood emerges from reward prediction errors
 - Watch for:
-  - Coordinated sound patterns
-  - Social clustering
-  - Stable "personalities" (mood states)
-  - Collective behaviors
+  - Coordinated sound patterns (communication)
+  - Social clustering (gathering together)
+  - Stable "personalities" (consistent mood states)
+  - Collective behaviors (synchronized actions)
+
+**Visual Guide**: See [docs/VISUALIZATION.md](docs/VISUALIZATION.md) for detailed explanation of what you're seeing.
 
 ## 5. Controls (Visualization Mode)
 
 - **SPACE**: Pause/Resume
 - **ESC**: Quit
+
+### Understanding the Display
+
+- **Colored circles** = Creatures (color shows mood)
+- **Green squares** = Food
+- **Gray squares** = Obstacles  
+- **Blue/red halos** = Sound waves
+- **Bottom panel** = Statistics
+
+See the [Visualization Guide](docs/VISUALIZATION.md) for complete details.
 
 ## 6. Understanding the Output
 

@@ -30,6 +30,8 @@ outputs/
 *.log
 simulation_saves/
 emergence_reports/
+simulation_output/
+test_visualization.py
 
 # OS
 .DS_Store
