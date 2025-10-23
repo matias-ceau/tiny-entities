@@ -29,6 +29,27 @@ uv sync --all-extras  # Use --all-extras to include dev dependencies
 cp .env.example .env
 ```
 
+### API Configuration (Optional)
+
+The simulation can use LLM models for more sophisticated creature behaviors and emergence analysis. The default configuration uses **OpenRouter** with up-to-date models:
+
+- **Action Model**: `meta-llama/llama-3.1-8b-instruct:free` (free tier for creature actions)
+- **Analysis Model**: `anthropic/claude-3.5-sonnet` (for emergence analysis)
+
+To enable LLM features, add your OpenRouter API key to `.env`:
+```bash
+OPENROUTER_API_KEY=your_openrouter_key_here
+```
+
+Get your API key at [OpenRouter](https://openrouter.ai/). The free tier models allow you to experiment without cost!
+
+You can customize models in `.env` by setting:
+```bash
+DEFAULT_FREE_MODEL=meta-llama/llama-3.1-8b-instruct:free
+DEFAULT_ANALYSIS_MODEL=anthropic/claude-3.5-sonnet
+MAX_DAILY_COST_EUR=2.0
+```
+
 ### Quick Demo
 
 Run the comprehensive demo to see all features:
