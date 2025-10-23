@@ -33,7 +33,7 @@ cp .env.example .env
 
 ### API Configuration (Optional)
 
-The simulation can use LLM models for more sophisticated creature behaviors and emergence analysis. 
+The simulation can use LLM models for more sophisticated creature behaviors and emergence analysis.
 
 #### Why OpenRouter?
 
