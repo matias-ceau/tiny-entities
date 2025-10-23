@@ -2,17 +2,18 @@
 
 🧬 Artificial life simulation with emergent mood-based cognition and social behaviors.
 
-![Simulation Example](docs/images/simulation_example.png)
+![Simulation Visualization](docs/images/visualization_with_legend.png)
 
 **Status**: ✅ **Functional** - Simulations run successfully with graphical visualization
 
 ## Features
 
 - 🎭 **Emergent Mood System** - Creatures develop emotional states from reward prediction errors
-- 🧠 **LLM-assisted cognition** - Optional OpenRouter models steer action selection, generate self-reflection journals, and narrate emergence reports
+- 🧠 **LLM-assisted Cognition** - Optional OpenRouter integration with free tier models for action selection, self-reflection journals, and emergence analysis
+- 💰 **Built-in Cost Tracking** - Automatic pricing calculations and daily spending limits protect your budget
 - 🗺️ **2D Grid World** - Dynamic environment with food, obstacles, and sound propagation
 - 🎨 **Real-time Visualization** - pygame-based rendering with mood-colored creatures
-- 🔊 **Procedural Sound Synthesis** - Every vocalization now generates a mood-infused audio waveform for analysis or export
+- 🔊 **Procedural Sound Synthesis** - Every vocalization generates a mood-infused audio waveform for analysis or export
 - 📊 **Analysis Tools** - Track emergence patterns and collective behaviors, including AI-written summaries when LLMs are enabled
 - 🧪 **Headless Mode** - Generate snapshots without display for testing/docs
 
@@ -32,24 +33,42 @@ cp .env.example .env
 
 ### API Configuration (Optional)
 
-The simulation can use LLM models for more sophisticated creature behaviors and emergence analysis. The default configuration uses **OpenRouter** with up-to-date models:
+The simulation can use LLM models for more sophisticated creature behaviors and emergence analysis. 
 
-- **Action Model**: `meta-llama/llama-3.1-8b-instruct:free` (free tier for creature actions)
-- **Analysis Model**: `anthropic/claude-3.5-sonnet` (for emergence analysis)
+#### Why OpenRouter?
 
-To enable LLM features, add your OpenRouter API key to `.env`:
+We recommend **OpenRouter** as the default API provider because it offers:
+- **Single API key** for accessing multiple model providers (Anthropic, Meta, OpenAI, etc.)
+- **Free tier models** like Llama 3.1 8B for cost-free experimentation
+- **Latest models** including Claude 3.5 Sonnet, the most capable Claude model
+- **Transparent pricing** with automatic cost tracking in EUR
+- **Automatic fallbacks** and intelligent routing
+
+#### Default Models
+
+- **Action Model**: `meta-llama/llama-3.1-8b-instruct:free` - Free tier model for creature decision-making
+- **Analysis Model**: `anthropic/claude-3.5-sonnet` - Premium model for sophisticated emergence analysis
+
+#### Setup
+
+1. Get your free API key at [OpenRouter](https://openrouter.ai/)
+2. Add it to your `.env` file:
 ```bash
 OPENROUTER_API_KEY=your_openrouter_key_here
 ```
 
-Get your API key at [OpenRouter](https://openrouter.ai/). The free tier models allow you to experiment without cost!
+The free tier Llama model means you can run simulations with LLM features at **zero cost**!
 
-You can customize models in `.env` by setting:
+#### Customization
+
+You can customize models and set spending limits in `.env`:
 ```bash
 DEFAULT_FREE_MODEL=meta-llama/llama-3.1-8b-instruct:free
 DEFAULT_ANALYSIS_MODEL=anthropic/claude-3.5-sonnet
-MAX_DAILY_COST_EUR=2.0
+MAX_DAILY_COST_EUR=2.0  # Built-in cost protection
 ```
+
+The system includes automatic cost tracking - see `src/config/model_pricing.py` for pricing data on 13+ popular models.
 
 ### Quick Demo
 
