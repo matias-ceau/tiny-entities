@@ -25,7 +25,9 @@ def visualizer():
     sim = EmergentLifeSimulation(num_creatures=2, max_steps=10)
     viz = SimulationVisualizer(sim, width=400, height=400)
     yield viz
-    pygame.quit()
+    # Safely quit pygame if it was initialized
+    if pygame.get_init():
+        pygame.quit()
 
 
 def test_color_palette_structure(visualizer):
