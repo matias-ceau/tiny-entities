@@ -9,10 +9,11 @@
 ## Features
 
 - 🎭 **Emergent Mood System** - Creatures develop emotional states from reward prediction errors
-- 🗺️ **2D Grid World** - Dynamic environment with food, obstacles, and sound propagation  
+- 🧠 **LLM-assisted cognition** - Optional OpenRouter models steer action selection, generate self-reflection journals, and narrate emergence reports
+- 🗺️ **2D Grid World** - Dynamic environment with food, obstacles, and sound propagation
 - 🎨 **Real-time Visualization** - pygame-based rendering with mood-colored creatures
-- 🔊 **Sound Communication** - Creatures emit and respond to sounds
-- 📊 **Analysis Tools** - Track emergence patterns and collective behaviors
+- 🔊 **Procedural Sound Synthesis** - Every vocalization now generates a mood-infused audio waveform for analysis or export
+- 📊 **Analysis Tools** - Track emergence patterns and collective behaviors, including AI-written summaries when LLMs are enabled
 - 🧪 **Headless Mode** - Generate snapshots without display for testing/docs
 
 ## Quick Start
@@ -61,7 +62,7 @@ uv run python demo.py
 python demo.py
 ```
 
-This demonstrates console mode, visualization, and analysis tools in one go.
+This demonstrates console mode, visualization, and analysis tools in one go. When LLM credentials are present the demo will also showcase reflective journaling and AI-generated emergence summaries.
 
 ### Run
 
@@ -91,5 +92,16 @@ uv run python examples/headless_visualization.py --creatures 10 --steps 1000
 # Or if you used pip
 python examples/headless_visualization.py --creatures 10 --steps 1000
 ```
+
+## Repository Layout
+
+- `src/` – Primary simulation engine and modules
+  - `tiny_entities/` – Package namespace
+  - `simulation/` – Main loop, LLM-assisted analysis hooks, orchestration utilities
+  - `creatures/` – Cognitive systems, mood regulation, and action policies
+  - `world/` – Environment models, physics, and procedural audio synthesizer
+- `examples/` – Runnable demonstrations and legacy prototypes (see `examples/legacy/little_social_dreamers`)
+- `docs/` – Extended documentation and design notes
+- `tests/` – Automated unit tests (including coverage for the new sound synthesizer)
 
 See [QUICKSTART.md](QUICKSTART.md) for more details and [ROADMAP.md](ROADMAP.md) for development plans.

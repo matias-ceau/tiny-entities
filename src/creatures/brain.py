@@ -1,5 +1,8 @@
+import json
 import numpy as np
 from typing import Dict, List
+
+from ..config.llm_client import get_llm_client
 from .mood_system import EmergentMoodSystem
 
 
@@ -46,10 +49,16 @@ class EnhancedBrain:
             "sad",
         ]
 
+        # Optional LLM client for reflective narration
+        self.llm_client = get_llm_client()
+        self.last_reflection_cost = 0.0
+
     def process_timestep(
         self, perception: Dict, action_taken: str, outcome: Dict
     ) -> Dict:
         """Complete cognitive cycle with emergent mood"""
+
+        cost_before = self.last_reflection_cost
 
         # 1. Calculate surprise from perception
         surprise = self._calculate_perceptual_surprise(perception)
@@ -58,10 +67,15 @@ class EnhancedBrain:
         reward = self._calculate_total_reward(surprise, outcome)
 
         # 3. Create situation representation
+        sound_field = perception.get("sound")
+        sound_level = float(
+            np.mean(np.asarray(sound_field)[:, :, 1]) if sound_field is not None else 0.0
+        )
+
         situation = {
             "food_nearby": perception.get("food_count", 0) > 0,
             "creatures_nearby": perception.get("creature_count", 0),
-            "sound_level": np.mean(perception.get("sound", [[0, 0]])[:, :, 1]),
+            "sound_level": sound_level,
         }
 
         # 4. Update mood based on reward prediction error
@@ -82,12 +96,23 @@ class EnhancedBrain:
         self.energy -= 1  # Energy cost per timestep
         self.health -= 0.1 if self.energy <= 0 else 0
 
-        return {
+        summary = {
             "mood": mood_update,
             "surprise": surprise,
             "reward": reward,
             "tokens_gained": tokens_gained,
         }
+
+        if self.llm_client and np.random.random() < 0.1:
+            reflection = self._generate_llm_reflection(perception, outcome)
+            if reflection:
+                summary["reflection"] = reflection
+
+        cost_delta = max(0.0, self.last_reflection_cost - cost_before)
+        if cost_delta > 0:
+            summary["llm_cost_eur"] = cost_delta
+
+        return summary
 
     def _calculate_perceptual_surprise(self, perception: Dict) -> float:
         """Calculate surprise based on how different perception is from memory"""
@@ -107,8 +132,14 @@ class EnhancedBrain:
         )
 
         # Sound surprise
-        current_sound = np.mean(perception.get("sound", [[0, 0]])[:, :, 1])
-        last_sound = np.mean(last_perception.get("sound", [[0, 0]])[:, :, 1])
+        current_field = perception.get("sound")
+        last_field = last_perception.get("sound")
+        current_sound = float(
+            np.mean(np.asarray(current_field)[:, :, 1]) if current_field is not None else 0.0
+        )
+        last_sound = float(
+            np.mean(np.asarray(last_field)[:, :, 1]) if last_field is not None else 0.0
+        )
         sound_change = abs(current_sound - last_sound)
 
         # Combine surprises
@@ -193,7 +224,28 @@ class EnhancedBrain:
         return biases
 
     def generate_internal_monologue(self) -> str:
-        """Generate simple internal thoughts based on state"""
+        """Generate internal thoughts using heuristics or an optional LLM."""
+
+        if self.llm_client:
+            latest_perception = self.perception_memory[-1] if self.perception_memory else {}
+            context = {
+                "valence": round(self.mood_system.valence, 2),
+                "arousal": round(self.mood_system.arousal, 2),
+                "health": round(self.health, 1),
+                "energy": round(self.energy, 1),
+                "perception": {
+                    "food": latest_perception.get("food_count", 0),
+                    "creatures": latest_perception.get("creature_count", 0),
+                },
+            }
+            response = self.llm_client.generate_reflection(
+                self.creature_id,
+                json.dumps(context),
+            )
+            if response and response.text:
+                self.last_reflection_cost = response.total_cost_eur
+                return response.text.strip()
+
         words = []
 
         # Mood words
@@ -216,8 +268,39 @@ class EnhancedBrain:
             if last_p.get("creature_count", 0) > 0:
                 words.append("creature near")
 
-            sound_level = np.mean(last_p.get("sound", [[0, 0]])[:, :, 1])
+            last_field = last_p.get("sound")
+            sound_level = float(
+                np.mean(np.asarray(last_field)[:, :, 1]) if last_field is not None else 0.0
+            )
             if sound_level > 0.5:
                 words.append("loud")
 
         return " ".join(words) if words else "..."
+
+    def _generate_llm_reflection(self, perception: Dict, outcome: Dict) -> str:
+        """Generate a short reflection from the LLM client."""
+
+        if not self.llm_client:
+            return ""
+
+        context_summary = json.dumps(
+            {
+                "perception": perception,
+                "outcome": outcome,
+                "mood": {
+                    "valence": self.mood_system.valence,
+                    "arousal": self.mood_system.arousal,
+                },
+            }
+        )
+
+        response = self.llm_client.generate_reflection(
+            self.creature_id,
+            context_summary,
+        )
+
+        if response and response.text:
+            self.last_reflection_cost = response.total_cost_eur
+            return response.text.strip()
+
+        return ""

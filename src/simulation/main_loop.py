@@ -1,10 +1,14 @@
 import asyncio
 import numpy as np
 from typing import List, Dict
+
 from ..world.non_deterministic import NonDeterministicWorldModel
+from ..world.sound_engine import SoundSynthesizer
 from ..creatures.brain import EnhancedBrain
 from ..creatures.action_selection import MoodInfluencedActionSelector
 from ..config.api_config import APIConfig
+from ..config.llm_client import get_llm_client
+from ..emergence.music_analyzer import MusicEmergenceAnalyzer
 
 
 class EmergentLifeSimulation:
@@ -26,10 +30,16 @@ class EmergentLifeSimulation:
         # Action selector
         self.action_selector = MoodInfluencedActionSelector()
 
+        # Optional LLM client for narrative summaries
+        self.llm_client = get_llm_client()
+        self.music_analyzer = MusicEmergenceAnalyzer()
+        self.sound_synth = SoundSynthesizer()
+
         # Data collection
         self.step_count = 0
         self.sound_history = []
         self.emergence_reports = []
+        self.reflection_log = []
 
         # Cost tracking
         self.daily_cost_eur = 0.0
@@ -88,6 +98,11 @@ class EmergentLifeSimulation:
 
             # Record sound events
             if action.startswith("make_sound"):
+                synth = self.sound_synth.synthesize(
+                    0.3 if "low" in action else 0.7,
+                    creature["brain"].mood_system.valence,
+                    creature["brain"].mood_system.arousal,
+                )
                 self.sound_history.append(
                     {
                         "step": self.step_count,
@@ -96,8 +111,23 @@ class EmergentLifeSimulation:
                         "frequency": 0.3 if "low" in action else 0.7,
                         "mood_valence": creature["brain"].mood_system.valence,
                         "mood_arousal": creature["brain"].mood_system.arousal,
+                        "waveform": synth.waveform,
+                        "sample_rate": synth.sample_rate,
+                        "metadata": synth.metadata,
                     }
                 )
+
+            if "reflection" in brain_update:
+                self.reflection_log.append(
+                    {
+                        "step": self.step_count,
+                        "creature_id": creature["id"],
+                        "text": brain_update["reflection"],
+                    }
+                )
+
+            if "llm_cost_eur" in brain_update:
+                self.daily_cost_eur += brain_update["llm_cost_eur"]
 
             # Check if creature dies
             if creature["brain"].health <= 0:
@@ -123,7 +153,7 @@ class EmergentLifeSimulation:
         """Analyze collective behaviors for emergence"""
         print(f"\n=== Emergence Analysis at step {self.step_count} ===")
 
-        # Simple analysis without API for now
+        # Simple analysis with optional LLM enhancements
         if len(self.sound_history) > 10:
             recent_sounds = self.sound_history[-50:]
             unique_creatures = set(s["creature_id"] for s in recent_sounds)
@@ -152,6 +182,15 @@ class EmergentLifeSimulation:
                             f"Avg interval: {avg_interval:.1f} ± {std_interval:.1f}"
                         )
 
+            analysis = await self.music_analyzer.analyze_collective_music(recent_sounds)
+            if analysis:
+                print(
+                    "Music score:", f"{analysis['music_score']:.1f}",
+                    "Coordination:", analysis['coordination_detected'],
+                    "Entropy trend:", analysis['entropy_trend']
+                )
+                print(analysis.get("full_analysis", ""))
+
         # Mood summary
         alive_creatures = [c for c in self.creatures if c["alive"]]
         if alive_creatures:
@@ -163,6 +202,50 @@ class EmergentLifeSimulation:
             )
 
             print(f"Average mood: valence={avg_valence:.2f}, arousal={avg_arousal:.2f}")
+
+        recent_reflections = self.reflection_log[-3:]
+        if recent_reflections:
+            print("Recent reflections:")
+            for reflection in recent_reflections:
+                print(
+                    f"  [{reflection['step']}] {reflection['creature_id']}: "
+                    f"{reflection['text']}"
+                )
+
+        if self.llm_client and (len(self.sound_history) > 10 or recent_reflections):
+            sound_metrics = {
+                "events": len(self.sound_history),
+                "unique_creatures": len({s["creature_id"] for s in self.sound_history}),
+            }
+            if self.sound_history:
+                sound_metrics.update(
+                    {
+                        "avg_frequency_hint": float(
+                            np.mean([s["frequency"] for s in self.sound_history])
+                        ),
+                    }
+                )
+
+            mood_metrics = {
+                "average_valence": float(
+                    np.mean([c["brain"].mood_system.valence for c in self.creatures])
+                ),
+                "average_arousal": float(
+                    np.mean([c["brain"].mood_system.arousal for c in self.creatures])
+                ),
+            }
+
+            summary_response = self.llm_client.summarize_emergence(
+                sound_metrics,
+                mood_metrics,
+                [r["text"] for r in recent_reflections],
+            )
+
+            if summary_response and summary_response.text:
+                print("LLM summary:")
+                print(summary_response.text.strip())
+                if summary_response.total_cost_eur:
+                    self.daily_cost_eur += summary_response.total_cost_eur
 
         print("=" * 50 + "\n")
 
@@ -198,6 +281,8 @@ class EmergentLifeSimulation:
 
         print(f"\nSimulation complete!")
         print(f"Total steps: {self.step_count}")
+        if self.daily_cost_eur > 0:
+            print(f"Estimated LLM cost: €{self.daily_cost_eur:.4f}")
         print(f"Total cost: €{self.daily_cost_eur:.3f}")
 
 
