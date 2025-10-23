@@ -3,8 +3,11 @@
 ## 1. Setup with uv
 
 ```bash
-# Sync dependencies from lock file
+# Sync dependencies from lock file (production dependencies only)
 uv sync
+
+# OR sync with dev dependencies for development
+uv sync --all-extras
 
 # Copy environment file
 cp .env.example .env

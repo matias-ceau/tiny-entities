@@ -25,7 +25,7 @@ pip install -e ".[dev]"
 cp .env.example .env
 
 # Or using uv (recommended - faster and more reliable)
-uv sync
+uv sync --all-extras  # Use --all-extras to include dev dependencies
 cp .env.example .env
 ```
 
