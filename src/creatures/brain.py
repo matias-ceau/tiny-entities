@@ -1,9 +1,12 @@
 import json
+import logging
 import numpy as np
-from typing import Dict, List
+from typing import Dict, List, Any, Optional
 
 from ..config.llm_client import get_llm_client
 from .mood_system import EmergentMoodSystem
+
+logger = logging.getLogger(__name__)
 
 
 class EnhancedBrain:
@@ -56,103 +59,185 @@ class EnhancedBrain:
     def process_timestep(
         self, perception: Dict, action_taken: str, outcome: Dict
     ) -> Dict:
-        """Complete cognitive cycle with emergent mood"""
+        """Complete cognitive cycle with emergent mood with input validation."""
+        try:
+            # Validate inputs
+            if not isinstance(perception, dict):
+                logger.error(f"Invalid perception type: {type(perception)}")
+                perception = {}
 
-        cost_before = self.last_reflection_cost
+            if not isinstance(action_taken, str):
+                logger.warning(f"Invalid action_taken type: {type(action_taken)}")
+                action_taken = str(action_taken) if action_taken else "unknown"
 
-        # 1. Calculate surprise from perception
-        surprise = self._calculate_perceptual_surprise(perception)
+            if not isinstance(outcome, dict):
+                logger.error(f"Invalid outcome type: {type(outcome)}")
+                outcome = {}
 
-        # 2. Calculate total reward (surprise + survival outcomes)
-        reward = self._calculate_total_reward(surprise, outcome)
+            cost_before = self.last_reflection_cost
 
-        # 3. Create situation representation
-        sound_field = perception.get("sound")
-        sound_level = float(
-            np.mean(np.asarray(sound_field)[:, :, 1]) if sound_field is not None else 0.0
-        )
+            # 1. Calculate surprise from perception
+            surprise = self._calculate_perceptual_surprise(perception)
 
-        situation = {
-            "food_nearby": perception.get("food_count", 0) > 0,
-            "creatures_nearby": perception.get("creature_count", 0),
-            "sound_level": sound_level,
-        }
+            # 2. Calculate total reward (surprise + survival outcomes)
+            reward = self._calculate_total_reward(surprise, outcome)
 
-        # 4. Update mood based on reward prediction error
-        mood_update = self.mood_system.process_experience(situation, reward)
+            # 3. Create situation representation
+            sound_field = perception.get("sound")
+            try:
+                sound_level = float(
+                    np.mean(np.asarray(sound_field)[:, :, 1]) if sound_field is not None else 0.0
+                )
+            except (IndexError, ValueError, TypeError) as e:
+                logger.warning(f"Error calculating sound level: {e}")
+                sound_level = 0.0
 
-        # 5. Update action values based on outcome
-        self._update_action_values(action_taken, reward)
+            situation = {
+                "food_nearby": perception.get("food_count", 0) > 0,
+                "creatures_nearby": perception.get("creature_count", 0),
+                "sound_level": sound_level,
+            }
 
-        # 6. Gain tokens from surprise
-        tokens_gained = int(surprise * 10)
-        self.action_tokens = min(self.max_tokens, self.action_tokens + tokens_gained)
+            # 4. Update mood based on reward prediction error
+            mood_update = self.mood_system.process_experience(situation, reward)
 
-        # 7. Update health/energy based on outcome
-        if outcome.get("effect") == "found_food":
-            self.health = min(100, self.health + 20)
-            self.energy = min(100, self.energy + 30)
+            # 5. Update action values based on outcome
+            self._update_action_values(action_taken, reward)
 
-        self.energy -= 1  # Energy cost per timestep
-        self.health -= 0.1 if self.energy <= 0 else 0
+            # 6. Gain tokens from surprise
+            tokens_gained = int(surprise * 10)
+            self.action_tokens = min(self.max_tokens, self.action_tokens + tokens_gained)
 
-        summary = {
-            "mood": mood_update,
-            "surprise": surprise,
-            "reward": reward,
-            "tokens_gained": tokens_gained,
-        }
+            # 7. Update health/energy based on outcome
+            if outcome.get("effect") == "found_food":
+                self.health = min(100, self.health + 20)
+                self.energy = min(100, self.energy + 30)
 
-        if self.llm_client and np.random.random() < 0.1:
-            reflection = self._generate_llm_reflection(perception, outcome)
-            if reflection:
-                summary["reflection"] = reflection
+            self.energy -= 1  # Energy cost per timestep
+            self.health -= 0.1 if self.energy <= 0 else 0
 
-        cost_delta = max(0.0, self.last_reflection_cost - cost_before)
-        if cost_delta > 0:
-            summary["llm_cost_eur"] = cost_delta
+            summary = {
+                "mood": mood_update,
+                "surprise": surprise,
+                "reward": reward,
+                "tokens_gained": tokens_gained,
+            }
 
-        return summary
+            if self.llm_client and np.random.random() < 0.1:
+                reflection = self._generate_llm_reflection(perception, outcome)
+                if reflection:
+                    summary["reflection"] = reflection
+
+            cost_delta = max(0.0, self.last_reflection_cost - cost_before)
+            if cost_delta > 0:
+                summary["llm_cost_eur"] = cost_delta
+
+            return summary
+
+        except Exception as e:
+            logger.error(f"Error in process_timestep for {self.creature_id}: {e}", exc_info=True)
+            # Return minimal valid summary on error
+            return {
+                "mood": {"valence": 0.0, "arousal": 0.5},
+                "surprise": 0.0,
+                "reward": 0.0,
+                "tokens_gained": 0,
+            }
 
     def _calculate_perceptual_surprise(self, perception: Dict) -> float:
-        """Calculate surprise based on how different perception is from memory"""
-        if not self.perception_memory:
+        """Calculate surprise based on how different perception is from memory with validation."""
+        try:
+            # Validate perception structure
+            if not isinstance(perception, dict):
+                logger.warning(f"Invalid perception type: {type(perception)}, expected dict")
+                return 0.0
+
+            # Validate required keys
+            required_keys = ['food_count', 'creature_count', 'sound']
+            missing_keys = [k for k in required_keys if k not in perception]
+            if missing_keys:
+                logger.warning(f"Perception missing keys: {missing_keys}")
+                # Use defaults for missing keys
+                perception = {
+                    'food_count': perception.get('food_count', 0),
+                    'creature_count': perception.get('creature_count', 0),
+                    'sound': perception.get('sound', None)
+                }
+
+            if not self.perception_memory:
+                self.perception_memory.append(perception)
+                return 0.5  # Moderate surprise for first perception
+
+            # Simple surprise: changes in key features
+            last_perception = self.perception_memory[-1]
+
+            # Validate numeric values
+            try:
+                food_change = abs(
+                    float(perception.get("food_count", 0)) - float(last_perception.get("food_count", 0))
+                )
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Invalid food_count value: {e}")
+                food_change = 0.0
+
+            try:
+                creature_change = abs(
+                    float(perception.get("creature_count", 0))
+                    - float(last_perception.get("creature_count", 0))
+                )
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Invalid creature_count value: {e}")
+                creature_change = 0.0
+
+            # Sound surprise with validation
+            current_field = perception.get("sound")
+            last_field = last_perception.get("sound")
+
+            try:
+                # Validate sound field is ndarray
+                if current_field is not None:
+                    if not isinstance(current_field, np.ndarray):
+                        logger.warning("Current sound field is not ndarray, converting")
+                        current_field = np.asarray(current_field)
+                    # Validate shape
+                    if current_field.ndim < 3 or current_field.shape[2] < 2:
+                        logger.warning(f"Invalid sound field shape: {current_field.shape}")
+                        current_field = None
+
+                if last_field is not None:
+                    if not isinstance(last_field, np.ndarray):
+                        logger.warning("Last sound field is not ndarray, converting")
+                        last_field = np.asarray(last_field)
+                    if last_field.ndim < 3 or last_field.shape[2] < 2:
+                        logger.warning(f"Invalid last sound field shape: {last_field.shape}")
+                        last_field = None
+
+                current_sound = float(
+                    np.mean(current_field[:, :, 1]) if current_field is not None else 0.0
+                )
+                last_sound = float(
+                    np.mean(last_field[:, :, 1]) if last_field is not None else 0.0
+                )
+                sound_change = abs(current_sound - last_sound)
+            except (IndexError, ValueError, TypeError) as e:
+                logger.warning(f"Error processing sound field: {e}")
+                sound_change = 0.0
+
+            # Combine surprises
+            surprise = (
+                food_change * 0.3 + creature_change * 0.3 + sound_change * 0.4
+            ) / 3.0
+
+            # Update memory
             self.perception_memory.append(perception)
-            return 0.5  # Moderate surprise for first perception
+            if len(self.perception_memory) > self.max_memory:
+                self.perception_memory.pop(0)
 
-        # Simple surprise: changes in key features
-        last_perception = self.perception_memory[-1]
+            return min(1.0, float(surprise))
 
-        food_change = abs(
-            perception.get("food_count", 0) - last_perception.get("food_count", 0)
-        )
-        creature_change = abs(
-            perception.get("creature_count", 0)
-            - last_perception.get("creature_count", 0)
-        )
-
-        # Sound surprise
-        current_field = perception.get("sound")
-        last_field = last_perception.get("sound")
-        current_sound = float(
-            np.mean(np.asarray(current_field)[:, :, 1]) if current_field is not None else 0.0
-        )
-        last_sound = float(
-            np.mean(np.asarray(last_field)[:, :, 1]) if last_field is not None else 0.0
-        )
-        sound_change = abs(current_sound - last_sound)
-
-        # Combine surprises
-        surprise = (
-            food_change * 0.3 + creature_change * 0.3 + sound_change * 0.4
-        ) / 3.0
-
-        # Update memory
-        self.perception_memory.append(perception)
-        if len(self.perception_memory) > self.max_memory:
-            self.perception_memory.pop(0)
-
-        return min(1.0, surprise)
+        except Exception as e:
+            logger.error(f"Unexpected error calculating surprise: {e}", exc_info=True)
+            return 0.0
 
     def _calculate_total_reward(self, surprise: float, outcome: Dict) -> float:
         """Combine surprise reward with survival rewards"""
