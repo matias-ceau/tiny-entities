@@ -1,7 +1,10 @@
 import logging
 import numpy as np
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, TYPE_CHECKING
 from .physics import SimpleWorld
+
+if TYPE_CHECKING:
+    from ..config.config_schema import WorldConfig, ActionConfig
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +19,28 @@ VALID_ACTIONS = {
 class NonDeterministicWorldModel:
     """World model that can accept/reject actions and update state"""
 
-    def __init__(self, acceptance_rate: float = 0.9):
-        self.acceptance_rate = acceptance_rate
-        self.world = SimpleWorld()
+    def __init__(
+        self,
+        acceptance_rate: float = 0.9,
+        world_config: Optional['WorldConfig'] = None,
+        action_config: Optional['ActionConfig'] = None
+    ):
+        """
+        Initialize world model with optional configuration.
+
+        Args:
+            acceptance_rate: Legacy parameter (use action_config instead)
+            world_config: Configuration for world parameters
+            action_config: Configuration for action acceptance
+        """
+        # Use action_config if provided, otherwise use acceptance_rate parameter
+        if action_config:
+            self.acceptance_rate = action_config.acceptance_rate
+        else:
+            self.acceptance_rate = acceptance_rate
+
+        # Create world with config
+        self.world = SimpleWorld(config=world_config)
 
         # Track creature positions
         self.creature_positions = {}

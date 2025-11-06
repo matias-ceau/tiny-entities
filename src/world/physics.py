@@ -1,23 +1,55 @@
 import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..config.config_schema import WorldConfig
 
 
 class SimpleWorld:
     """Conway's Game of Life inspired 2D world with resources"""
 
-    def __init__(self, width: int = 100, height: int = 100):
-        self.width = width
-        self.height = height
+    def __init__(
+        self,
+        width: int = 100,
+        height: int = 100,
+        config: Optional['WorldConfig'] = None
+    ):
+        """
+        Initialize world with optional configuration.
+
+        Args:
+            width: World width (used if config not provided)
+            height: World height (used if config not provided)
+            config: WorldConfig instance with all parameters
+        """
+        # Use config if provided, otherwise use parameters or defaults
+        if config:
+            self.width = config.width
+            self.height = config.height
+            self.food_spawn_rate = config.food_spawn_rate
+            self.food_respawn_probability = config.food_respawn_probability
+            self.food_respawn_amount = config.food_respawn_amount
+            self.obstacle_density = config.obstacle_density
+            self.sound_decay_rate = config.sound_decay_rate
+        else:
+            # Backward compatibility
+            self.width = width
+            self.height = height
+            self.food_spawn_rate = 0.1
+            self.food_respawn_probability = 0.01
+            self.food_respawn_amount = 0.005
+            self.obstacle_density = 0.05
+            self.sound_decay_rate = 0.9
 
         # World state: 0=empty, 1=food, 2=obstacle, 3=creature
-        self.grid = np.zeros((height, width), dtype=int)
+        self.grid = np.zeros((self.height, self.width), dtype=int)
 
         # Sound layer - simple frequency/amplitude at each location
-        self.sound_grid = np.zeros((height, width, 2))  # [frequency, amplitude]
+        self.sound_grid = np.zeros((self.height, self.width, 2))  # [frequency, amplitude]
 
-        # Spawn some food randomly
-        self._spawn_food(density=0.1)
-        self._spawn_obstacles(density=0.05)
+        # Spawn initial resources using configured values
+        self._spawn_food(density=self.food_spawn_rate)
+        self._spawn_obstacles(density=self.obstacle_density)
 
     def _spawn_food(self, density: float):
         """Randomly place food in world"""
@@ -75,9 +107,9 @@ class SimpleWorld:
 
     def step(self):
         """Update world physics each timestep"""
-        # Sound decay
-        self.sound_grid *= 0.9
+        # Sound decay using configured rate
+        self.sound_grid *= self.sound_decay_rate
 
-        # Occasionally spawn new food
-        if np.random.random() < 0.01:
-            self._spawn_food(0.005)
+        # Occasionally spawn new food using configured probability and amount
+        if np.random.random() < self.food_respawn_probability:
+            self._spawn_food(self.food_respawn_amount)
