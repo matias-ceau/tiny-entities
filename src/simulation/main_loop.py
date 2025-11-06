@@ -1,17 +1,17 @@
+"""Legacy main simulation loop - now uses refactored components.
+
+This module provides backward compatibility while using the new
+orchestrator-based architecture internally.
+"""
+
 import asyncio
 import logging
 import time
-import numpy as np
 from typing import List, Dict, Optional, TYPE_CHECKING
 
-from ..world.non_deterministic import NonDeterministicWorldModel
-from ..world.sound_engine import SoundSynthesizer
-from ..creatures.brain import EnhancedBrain
-from ..creatures.action_selection import MoodInfluencedActionSelector
-from ..config.api_config import APIConfig
+from .orchestrator import SimulationOrchestrator
 from ..config.llm_client import get_llm_client
 from ..config.logging_config import PerformanceLogger
-from ..emergence.music_analyzer import MusicEmergenceAnalyzer
 
 if TYPE_CHECKING:
     from ..config.config_schema import SimulationConfig
@@ -20,7 +20,12 @@ logger = logging.getLogger(__name__)
 
 
 class EmergentLifeSimulation:
-    """Main simulation loop for artificial life"""
+    """
+    Main simulation loop for artificial life.
+
+    NOTE: This class now wraps SimulationOrchestrator for backward compatibility.
+    New code should use SimulationOrchestrator directly for better control.
+    """
 
     def __init__(
         self,
@@ -38,322 +43,210 @@ class EmergentLifeSimulation:
             analyze_every: Analysis frequency (used if config not provided)
             config: Complete SimulationConfig instance
         """
-        # Use config if provided, otherwise use parameters
-        if config:
-            self.num_creatures = config.creatures.initial_count
-            self.max_steps = config.max_steps
-            self.analyze_every = config.analysis.analyze_every
-            self.config = config
+        self.num_creatures = num_creatures
+        self.max_steps = max_steps
+        self.analyze_every = analyze_every
+        self.config = config
 
-            # Initialize world with config
-            self.world_model = NonDeterministicWorldModel(
-                world_config=config.world,
-                action_config=config.actions
-            )
-        else:
-            # Backward compatibility
-            self.num_creatures = num_creatures
-            self.max_steps = max_steps
-            self.analyze_every = analyze_every
-            self.config = None
-
-            # Initialize world without config
-            self.world_model = NonDeterministicWorldModel()
-
-        logger.info(f"Initializing simulation with {self.num_creatures} creatures")
-        logger.info(f"World size: {self.world_model.world.width}x{self.world_model.world.height}")
-
-        # Initialize creatures
-        self.creatures = self._create_creatures(self.num_creatures)
-
-        # Action selector
-        self.action_selector = MoodInfluencedActionSelector()
-
-        # Optional LLM client for narrative summaries
+        # Get LLM client
         self.llm_client = get_llm_client()
-        self.music_analyzer = MusicEmergenceAnalyzer()
-        self.sound_synth = SoundSynthesizer()
 
-        # Data collection
-        self.step_count = 0
-        self.sound_history = []
-        self.emergence_reports = []
-        self.reflection_log = []
+        # Create orchestrator with config
+        if config:
+            # Override config with any provided parameters
+            if num_creatures != 5:
+                config.creatures.initial_count = num_creatures
+            if max_steps != 10000:
+                config.max_steps = max_steps
+            if analyze_every != 500:
+                config.analysis.analyze_every = analyze_every
 
-        # Cost tracking
-        self.daily_cost_eur = 0.0
-        self.api_config = APIConfig()
+        self.orchestrator = SimulationOrchestrator(
+            config=config,
+            llm_client=self.llm_client
+        )
+
+        # Setup simulation
+        self.orchestrator.setup()
 
         # Performance tracking
         self.perf_logger = PerformanceLogger(logger)
 
-    def _create_creatures(self, num: int) -> List[Dict]:
-        """Create initial creatures"""
-        creatures = []
+        # Track cost for backward compatibility
+        self.daily_cost_eur = 0.0
 
-        # Get configs if available
-        creature_config = self.config.creatures if self.config else None
-        mood_config = self.config.mood if self.config else None
+        logger.info(f"Initialized simulation with {self.orchestrator.num_creatures} creatures")
+        logger.info(
+            f"World size: {self.orchestrator.world_model.world.width}x"
+            f"{self.orchestrator.world_model.world.height}"
+        )
 
-        for i in range(num):
-            # Random starting position
-            x = np.random.randint(10, self.world_model.world.width - 10)
-            y = np.random.randint(10, self.world_model.world.height - 10)
+    @property
+    def creatures(self) -> List[Dict]:
+        """Get creatures list for backward compatibility."""
+        return self.orchestrator.get_creatures()
 
-            creature = {
-                "id": f"creature_{i}",
-                "brain": EnhancedBrain(
-                    f"creature_{i}",
-                    creature_config=creature_config,
-                    mood_config=mood_config
-                ),
-                "position": (x, y),
-                "alive": True,
-                "birth_step": 0,
-            }
+    @property
+    def step_count(self) -> int:
+        """Get current step count."""
+        return self.orchestrator.engine.step_count if self.orchestrator.engine else 0
 
-            creatures.append(creature)
+    @property
+    def world_model(self):
+        """Get world model for backward compatibility."""
+        return self.orchestrator.world_model
 
-        logger.debug(f"Created {num} creatures at random positions")
-        return creatures
+    @property
+    def sound_history(self) -> List[Dict]:
+        """Get sound history for backward compatibility."""
+        if self.orchestrator.collector:
+            return self.orchestrator.collector.sound_history
+        return []
+
+    @property
+    def reflection_log(self) -> List[Dict]:
+        """Get reflection log for backward compatibility."""
+        if self.orchestrator.collector:
+            return self.orchestrator.collector.reflection_log
+        return []
 
     async def simulation_step(self):
-        """Execute one simulation timestep"""
-        step_start = time.time()
+        """
+        Execute one simulation timestep.
 
-        # Process each creature
-        for creature in self.creatures:
-            if not creature["alive"]:
-                continue
-
-            # Get perception
-            world_view = self.world_model.world.get_local_view(
-                creature["position"][0], creature["position"][1]
-            )
-            perception = self._process_perception(world_view)
-
-            # Select action
-            action = self.action_selector.select_action(creature["brain"], perception)
-
-            # Execute action in world
-            outcome = self.world_model.propose_action(
-                creature["id"], action, creature["position"]
-            )
-
-            # Update creature position
-            creature["position"] = outcome["new_position"]
-
-            # Process cognitive cycle
-            brain_update = creature["brain"].process_timestep(
-                perception, action, outcome
-            )
-
-            # Record sound events
-            if action.startswith("make_sound"):
-                synth = self.sound_synth.synthesize(
-                    0.3 if "low" in action else 0.7,
-                    creature["brain"].mood_system.valence,
-                    creature["brain"].mood_system.arousal,
-                )
-                self.sound_history.append(
-                    {
-                        "step": self.step_count,
-                        "creature_id": creature["id"],
-                        "position": creature["position"],
-                        "frequency": 0.3 if "low" in action else 0.7,
-                        "mood_valence": creature["brain"].mood_system.valence,
-                        "mood_arousal": creature["brain"].mood_system.arousal,
-                        "waveform": synth.waveform,
-                        "sample_rate": synth.sample_rate,
-                        "metadata": synth.metadata,
-                    }
-                )
-
-            if "reflection" in brain_update:
-                self.reflection_log.append(
-                    {
-                        "step": self.step_count,
-                        "creature_id": creature["id"],
-                        "text": brain_update["reflection"],
-                    }
-                )
-
-            if "llm_cost_eur" in brain_update:
-                self.daily_cost_eur += brain_update["llm_cost_eur"]
-
-            # Check if creature dies
-            if creature["brain"].health <= 0:
-                creature["alive"] = False
-                logger.info(f"{creature['id']} died at step {self.step_count}")
-
-        # Update world
-        self.world_model.world.step()
-
-        self.step_count += 1
-
-        # Record performance
-        step_duration = time.time() - step_start
-        self.perf_logger.record_metric("step_duration", step_duration)
-
-    def _process_perception(self, world_view: Dict) -> Dict:
-        """Process raw world view into creature perception"""
-        return {
-            "visual": world_view["visual"],
-            "sound": world_view["sound"],
-            "food_count": world_view["food_count"],
-            "obstacle_count": world_view["obstacle_count"],
-            "creature_count": world_view["creature_count"],
-        }
+        NOTE: This is now handled by SimulationEngine internally.
+        This method is kept for backward compatibility only.
+        """
+        logger.warning(
+            "simulation_step() is deprecated. "
+            "Use SimulationOrchestrator.run() instead."
+        )
+        if self.orchestrator.engine:
+            events = await self.orchestrator.engine.step()
+            if self.orchestrator.collector:
+                self.orchestrator.collector.process_events(events)
 
     async def analyze_emergence(self):
-        """Analyze collective behaviors for emergence"""
+        """
+        Analyze collective behaviors for emergence.
+
+        NOTE: This is now handled by EmergenceAnalyzer internally.
+        This method logs results for backward compatibility.
+        """
+        if not self.orchestrator.collector or not self.orchestrator.analyzer:
+            return
+
         logger.info(f"=== Emergence Analysis at step {self.step_count} ===")
 
-        # Simple analysis with optional LLM enhancements
-        if len(self.sound_history) > 10:
-            recent_sounds = self.sound_history[-50:]
-            unique_creatures = set(s["creature_id"] for s in recent_sounds)
+        # Get recent data
+        sound_history = self.orchestrator.collector.get_recent_sounds(n=50)
+        reflections = self.orchestrator.collector.get_recent_reflections(n=3)
 
+        # Analyze
+        analysis = await self.orchestrator.analyzer.analyze(
+            step=self.step_count,
+            sound_history=sound_history,
+            creatures=self.creatures,
+            reflections=reflections
+        )
+
+        # Log results (for backward compatibility)
+        if "sound_patterns" in analysis:
+            patterns = analysis["sound_patterns"]
             logger.info(
-                f"Sound activity: {len(recent_sounds)} sounds from "
-                f"{len(unique_creatures)} creatures"
+                f"Sound activity: {patterns.get('total_sounds', 0)} sounds from "
+                f"{patterns.get('unique_creatures', 0)} creatures"
             )
-
-            # Check for patterns
-            if len(recent_sounds) > 20:
-                # Simple rhythm detection
-                time_diffs = []
-                for i in range(1, len(recent_sounds)):
-                    time_diffs.append(
-                        recent_sounds[i]["step"] - recent_sounds[i - 1]["step"]
-                    )
-
-                if time_diffs:
-                    avg_interval = np.mean(time_diffs)
-                    std_interval = np.std(time_diffs)
-
-                    if std_interval < avg_interval * 0.5:
-                        logger.info(
-                            f"Possible rhythmic pattern detected! "
-                            f"Avg interval: {avg_interval:.1f} ± {std_interval:.1f}"
-                        )
-
-            analysis = await self.music_analyzer.analyze_collective_music(recent_sounds)
-            if analysis:
+            if patterns.get("rhythmic_pattern_detected"):
                 logger.info(
-                    f"Music score: {analysis['music_score']:.1f}, "
-                    f"Coordination: {analysis['coordination_detected']}, "
-                    f"Entropy trend: {analysis['entropy_trend']}"
+                    f"Rhythmic pattern detected! "
+                    f"Interval: {patterns.get('avg_interval', 0):.1f} ± "
+                    f"{patterns.get('std_interval', 0):.1f}"
                 )
-                if analysis.get("full_analysis"):
-                    logger.info(f"Full analysis: {analysis.get('full_analysis')}")
 
-        # Mood summary
-        alive_creatures = [c for c in self.creatures if c["alive"]]
-        if alive_creatures:
-            avg_valence = np.mean(
-                [c["brain"].mood_system.valence for c in alive_creatures]
-            )
-            avg_arousal = np.mean(
-                [c["brain"].mood_system.arousal for c in alive_creatures]
+        if "music_emergence" in analysis and analysis["music_emergence"]:
+            music = analysis["music_emergence"]
+            logger.info(
+                f"Music score: {music.get('music_score', 0):.1f}, "
+                f"Coordination: {music.get('coordination_detected', False)}, "
+                f"Entropy trend: {music.get('entropy_trend', 'unknown')}"
             )
 
-            logger.info(f"Average mood: valence={avg_valence:.2f}, arousal={avg_arousal:.2f}")
+        if "mood_dynamics" in analysis:
+            mood = analysis["mood_dynamics"]
+            logger.info(
+                f"Average mood: valence={mood['avg_valence']:.2f}, "
+                f"arousal={mood['avg_arousal']:.2f}"
+            )
 
-        recent_reflections = self.reflection_log[-3:]
-        if recent_reflections:
+        if "recent_reflections" in analysis:
             logger.info("Recent reflections:")
-            for reflection in recent_reflections:
-                logger.info(
-                    f"  [{reflection['step']}] {reflection['creature_id']}: "
-                    f"{reflection['text']}"
-                )
+            for r in analysis["recent_reflections"]:
+                logger.info(f"  [{r['step']}] {r['creature_id']}: {r['text']}")
 
-        if self.llm_client and (len(self.sound_history) > 10 or recent_reflections):
-            sound_metrics = {
-                "events": len(self.sound_history),
-                "unique_creatures": len({s["creature_id"] for s in self.sound_history}),
-            }
-            if self.sound_history:
-                sound_metrics.update(
-                    {
-                        "avg_frequency_hint": float(
-                            np.mean([s["frequency"] for s in self.sound_history])
-                        ),
-                    }
-                )
-
-            mood_metrics = {
-                "average_valence": float(
-                    np.mean([c["brain"].mood_system.valence for c in self.creatures])
-                ),
-                "average_arousal": float(
-                    np.mean([c["brain"].mood_system.arousal for c in self.creatures])
-                ),
-            }
-
-            summary_response = self.llm_client.summarize_emergence(
-                sound_metrics,
-                mood_metrics,
-                [r["text"] for r in recent_reflections],
-            )
-
-            if summary_response and summary_response.text:
-                logger.info("LLM summary:")
-                logger.info(summary_response.text.strip())
-                if summary_response.total_cost_eur:
-                    self.daily_cost_eur += summary_response.total_cost_eur
+        if "llm_summary" in analysis and analysis["llm_summary"]:
+            logger.info("LLM summary:")
+            logger.info(analysis["llm_summary"])
 
         logger.info("=" * 50)
 
     async def run_simulation(self):
-        """Run the full simulation"""
-        logger.info(f"Starting simulation with {self.num_creatures} creatures")
+        """Run the full simulation."""
+        logger.info(f"Starting simulation with {self.orchestrator.num_creatures} creatures")
         logger.info(
-            f"World size: {self.world_model.world.width}x"
-            f"{self.world_model.world.height}"
+            f"World size: {self.orchestrator.world_model.world.width}x"
+            f"{self.orchestrator.world_model.world.height}"
         )
 
         simulation_start = time.time()
 
-        while self.step_count < self.max_steps:
-            # Run simulation step
-            await self.simulation_step()
+        # Status callback
+        def step_callback(step: int, creatures: List[Dict]) -> bool:
+            """Called each step for status updates."""
+            if step % 100 == 0:
+                alive_count = sum(1 for c in creatures if c["alive"])
+                logger.info(f"Step {step}: {alive_count} creatures alive")
+            return True  # Continue simulation
 
-            # Periodic analysis
-            if self.step_count % self.analyze_every == 0:
-                analysis_start = time.time()
-                await self.analyze_emergence()
-                self.perf_logger.record_metric("analysis_duration", time.time() - analysis_start)
+        # Analysis callback
+        def analysis_callback(step: int, analysis: Dict) -> None:
+            """Called after each analysis."""
+            # Track costs if present
+            if self.orchestrator.collector:
+                self.daily_cost_eur = self.orchestrator.collector.total_llm_cost_eur
 
-            # Status update
-            if self.step_count % 100 == 0:
-                alive_count = sum(1 for c in self.creatures if c["alive"])
-                logger.info(f"Step {self.step_count}: {alive_count} creatures alive")
-
-            # Check if all creatures died
-            if not any(c["alive"] for c in self.creatures):
-                logger.warning("All creatures have died!")
-                break
-
-            # Small delay to prevent blocking
-            if self.step_count % 10 == 0:
-                await asyncio.sleep(0.001)
+        # Run simulation through orchestrator
+        summary = await self.orchestrator.run(
+            callback=step_callback,
+            analyze_callback=analysis_callback
+        )
 
         simulation_duration = time.time() - simulation_start
 
+        # Final summary
         logger.info("=" * 50)
         logger.info("Simulation complete!")
-        logger.info(f"Total steps: {self.step_count}")
+        logger.info(f"Total steps: {summary['total_steps']}")
         logger.info(f"Total time: {simulation_duration:.2f}s")
-        logger.info(f"Average step time: {simulation_duration/self.step_count:.4f}s")
+        if summary['total_steps'] > 0:
+            logger.info(
+                f"Average step time: {simulation_duration/summary['total_steps']:.4f}s"
+            )
+        logger.info(f"Creatures alive: {summary['creatures_alive']}/{summary['creatures_total']}")
+        logger.info(f"Survival rate: {summary['survival_rate']:.1%}")
 
-        if self.daily_cost_eur > 0:
-            logger.info(f"Total LLM cost: €{self.daily_cost_eur:.4f}")
+        if summary.get('total_llm_cost_eur', 0) > 0:
+            logger.info(f"Total LLM cost: €{summary['total_llm_cost_eur']:.4f}")
 
-        # Log performance metrics
-        logger.info("Performance Metrics:")
-        self.perf_logger.log_metrics()
+        # Performance metrics
+        if self.orchestrator.collector and self.orchestrator.collector.performance_metrics:
+            avg_step_duration = sum(
+                m['step_duration']
+                for m in self.orchestrator.collector.performance_metrics
+            ) / len(self.orchestrator.collector.performance_metrics)
+            logger.info(f"Average step duration: {avg_step_duration:.4f}s")
+
+        logger.info("=" * 50)
 
 
 # Entry point
