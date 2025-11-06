@@ -61,13 +61,59 @@ class SimpleWorld:
                 self.grid[y, x] = 1  # Food
 
     def _spawn_obstacles(self, density: float):
-        """Place obstacles that block movement"""
+        """Place obstacles in clear patterns (not random)"""
         obstacle_count = int(self.width * self.height * density)
-        for _ in range(obstacle_count):
-            x = np.random.randint(0, self.width)
-            y = np.random.randint(0, self.height)
-            if self.grid[y, x] == 0:  # Empty cell
-                self.grid[y, x] = 2  # Obstacle
+
+        # Create structured patterns instead of random placement
+        # This makes obstacles visible and predictable
+
+        # Pattern 1: Vertical walls (30% of obstacles)
+        wall_obstacles = int(obstacle_count * 0.3)
+        for _ in range(wall_obstacles // 8):  # Create walls of ~8 cells
+            x = np.random.randint(10, self.width - 10)
+            y_start = np.random.randint(10, self.height - 20)
+            for dy in range(8):
+                y = y_start + dy
+                if 0 <= y < self.height and self.grid[y, x] == 0:
+                    self.grid[y, x] = 2
+
+        # Pattern 2: Horizontal walls (30% of obstacles)
+        for _ in range(wall_obstacles // 8):
+            y = np.random.randint(10, self.height - 10)
+            x_start = np.random.randint(10, self.width - 20)
+            for dx in range(8):
+                x = x_start + dx
+                if 0 <= x < self.width and self.grid[y, x] == 0:
+                    self.grid[y, x] = 2
+
+        # Pattern 3: Small clusters (20% of obstacles)
+        cluster_obstacles = int(obstacle_count * 0.2)
+        for _ in range(cluster_obstacles // 4):
+            cx = np.random.randint(5, self.width - 5)
+            cy = np.random.randint(5, self.height - 5)
+            # 2x2 cluster
+            for dx in [0, 1]:
+                for dy in [0, 1]:
+                    x, y = cx + dx, cy + dy
+                    if 0 <= x < self.width and 0 <= y < self.height and self.grid[y, x] == 0:
+                        self.grid[y, x] = 2
+
+        # Pattern 4: Border obstacles (20% of obstacles)
+        border_obstacles = int(obstacle_count * 0.2)
+        for _ in range(border_obstacles):
+            # Random position on one of the borders
+            side = np.random.randint(4)
+            if side == 0:  # Top
+                x, y = np.random.randint(0, self.width), 0
+            elif side == 1:  # Bottom
+                x, y = np.random.randint(0, self.width), self.height - 1
+            elif side == 2:  # Left
+                x, y = 0, np.random.randint(0, self.height)
+            else:  # Right
+                x, y = self.width - 1, np.random.randint(0, self.height)
+
+            if self.grid[y, x] == 0:
+                self.grid[y, x] = 2
 
     def get_local_view(self, x: int, y: int, radius: int = 5) -> Dict:
         """Get creature's local perception"""
