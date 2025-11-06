@@ -1,14 +1,38 @@
 import numpy as np
-from typing import Dict, List
+from typing import Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..config.config_schema import MoodConfig
 
 
 class EmergentMoodSystem:
     """Mood emerges from reward prediction errors and accumulated experience"""
 
-    def __init__(self):
+    def __init__(self, config: Optional['MoodConfig'] = None):
+        """
+        Initialize mood system with optional configuration.
+
+        Args:
+            config: MoodConfig instance with parameters, uses defaults if None
+        """
+        # Use config if provided, otherwise use defaults
+        if config:
+            initial_valence = config.initial_valence
+            initial_arousal = config.initial_arousal
+            self.fast_learning = config.fast_learning_rate
+            self.slow_learning = config.slow_learning_rate
+            self.arousal_decay = config.arousal_decay
+        else:
+            # Default values for backward compatibility
+            initial_valence = 0.0
+            initial_arousal = 0.5
+            self.fast_learning = 0.1
+            self.slow_learning = 0.01
+            self.arousal_decay = 0.99
+
         # Core state
-        self.valence = 0.0  # -1 to 1, emerges from reward history
-        self.arousal = 0.5  # 0 to 1, intensity/activation level
+        self.valence = initial_valence  # -1 to 1, emerges from reward history
+        self.arousal = initial_arousal  # 0 to 1, intensity/activation level
 
         # Reward prediction system
         self.expected_reward = 0.0
@@ -17,10 +41,6 @@ class EmergentMoodSystem:
 
         # Association memory - what situations led to what outcomes
         self.situation_outcomes = {}  # Hash of situation -> list of outcomes
-
-        # Learning rates
-        self.fast_learning = 0.1  # For arousal (immediate response)
-        self.slow_learning = 0.01  # For valence (stable mood)
 
     def process_experience(self, situation: Dict, actual_reward: float):
         """Update mood based on prediction error"""
@@ -50,7 +70,7 @@ class EmergentMoodSystem:
         self.expected_reward = self._predict_reward(situation)
 
         # Arousal naturally decays over time
-        self.arousal *= 0.99
+        self.arousal *= self.arousal_decay
 
         return {
             "valence": self.valence,

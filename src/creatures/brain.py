@@ -1,10 +1,13 @@
 import json
 import logging
 import numpy as np
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, TYPE_CHECKING
 
 from ..config.llm_client import get_llm_client
 from .mood_system import EmergentMoodSystem
+
+if TYPE_CHECKING:
+    from ..config.config_schema import CreatureConfig, MoodConfig
 
 logger = logging.getLogger(__name__)
 
@@ -12,23 +15,50 @@ logger = logging.getLogger(__name__)
 class EnhancedBrain:
     """Brain with emergent mood based on reward learning"""
 
-    def __init__(self, creature_id: str):
+    def __init__(
+        self,
+        creature_id: str,
+        creature_config: Optional['CreatureConfig'] = None,
+        mood_config: Optional['MoodConfig'] = None
+    ):
+        """
+        Initialize brain with optional configuration.
+
+        Args:
+            creature_id: Unique identifier for this creature
+            creature_config: Configuration for creature parameters
+            mood_config: Configuration for mood system parameters
+        """
         self.creature_id = creature_id
 
+        # Use config if provided, otherwise use defaults
+        if creature_config:
+            starting_health = creature_config.starting_health
+            starting_energy = creature_config.starting_energy
+            self.action_tokens = creature_config.initial_action_tokens
+            self.max_tokens = creature_config.max_action_tokens
+            self.max_memory = 20  # Not yet configurable
+            self.energy_cost_per_step = creature_config.energy_cost_per_step
+            self.health_decay_rate = creature_config.health_decay_when_no_energy
+        else:
+            # Default values for backward compatibility
+            starting_health = 100.0
+            starting_energy = 100.0
+            self.action_tokens = 10
+            self.max_tokens = 50
+            self.max_memory = 20
+            self.energy_cost_per_step = 1.0
+            self.health_decay_rate = 0.1
+
         # Basic survival
-        self.health = 100.0
-        self.energy = 100.0
+        self.health = starting_health
+        self.energy = starting_energy
 
-        # Emergent mood system
-        self.mood_system = EmergentMoodSystem()
-
-        # Action tokens from surprise
-        self.action_tokens = 10
-        self.max_tokens = 50
+        # Emergent mood system with config
+        self.mood_system = EmergentMoodSystem(config=mood_config)
 
         # Memory for surprise calculation
         self.perception_memory = []
-        self.max_memory = 20
 
         # Learned action preferences based on outcomes
         self.action_values = {}  # action -> expected value
@@ -113,8 +143,8 @@ class EnhancedBrain:
                 self.health = min(100, self.health + 20)
                 self.energy = min(100, self.energy + 30)
 
-            self.energy -= 1  # Energy cost per timestep
-            self.health -= 0.1 if self.energy <= 0 else 0
+            self.energy -= self.energy_cost_per_step  # Energy cost per timestep
+            self.health -= self.health_decay_rate if self.energy <= 0 else 0
 
             summary = {
                 "mood": mood_update,
