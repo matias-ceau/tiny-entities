@@ -1,0 +1,31 @@
+# Small simulation configuration - for quick testing
+# Smaller world, fewer creatures, fewer steps
+
+world:
+  width: 50
+  height: 50
+  food_spawn_rate: 0.15
+  obstacle_density: 0.03
+  sound_decay_rate: 0.9
+
+creatures:
+  initial_count: 5
+  starting_health: 100.0
+  starting_energy: 100.0
+  perception_radius: 5
+
+mood:
+  fast_learning_rate: 0.1
+  slow_learning_rate: 0.01
+  arousal_decay: 0.99
+
+actions:
+  acceptance_rate: 0.9
+  llm_action_probability: 0.1  # Less LLM usage for faster testing
+
+analysis:
+  analyze_every: 200  # More frequent analysis
+
+max_steps: 2000
+random_seed: 42
+log_level: INFO

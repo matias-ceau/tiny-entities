@@ -1,0 +1,39 @@
+# Large simulation configuration - for comprehensive experiments
+# Larger world, more creatures, extended runtime
+
+world:
+  width: 200
+  height: 200
+  food_spawn_rate: 0.08
+  obstacle_density: 0.07
+  sound_decay_rate: 0.95
+
+creatures:
+  initial_count: 50
+  starting_health: 100.0
+  starting_energy: 100.0
+  perception_radius: 7
+  max_action_tokens: 50
+
+mood:
+  fast_learning_rate: 0.1
+  slow_learning_rate: 0.01
+  arousal_decay: 0.99
+
+actions:
+  acceptance_rate: 0.9
+  llm_action_probability: 0.15  # Reduced to manage API costs
+
+rewards:
+  surprise_multiplier: 0.5
+  food_reward: 1.0
+  social_sound_reward: 0.3
+  proximity_reward: 0.1
+
+analysis:
+  analyze_every: 1000  # Less frequent for performance
+  sound_history_window: 100
+
+max_steps: 20000
+random_seed: null
+log_level: INFO

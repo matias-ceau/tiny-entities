@@ -1,0 +1,40 @@
+# Experiment configuration - focus on social behavior
+# Optimized to encourage social interactions and sound communication
+
+world:
+  width: 100
+  height: 100
+  food_spawn_rate: 0.12  # Abundant food to reduce competition
+  obstacle_density: 0.02  # Few obstacles for easier movement
+  sound_decay_rate: 0.85  # Slower decay for better communication
+
+creatures:
+  initial_count: 20  # More creatures for social dynamics
+  starting_health: 100.0
+  starting_energy: 120.0  # Extra energy for more activity
+  perception_radius: 6
+
+mood:
+  fast_learning_rate: 0.12  # Faster mood changes
+  slow_learning_rate: 0.015
+  arousal_decay: 0.97  # Higher baseline arousal
+
+actions:
+  acceptance_rate: 0.95
+  llm_action_probability: 0.25  # More LLM for richer behaviors
+
+rewards:
+  surprise_multiplier: 0.4
+  food_reward: 0.8  # Lower food reward
+  social_sound_reward: 0.5  # Higher social reward
+  collision_penalty: -0.1  # Lower collision penalty
+  proximity_reward: 0.15  # Higher proximity reward
+
+analysis:
+  analyze_every: 300
+  sound_history_window: 75
+  rhythm_detection_threshold: 0.4
+
+max_steps: 15000
+random_seed: null
+log_level: INFO

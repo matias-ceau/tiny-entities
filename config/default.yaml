@@ -1,0 +1,49 @@
+# Default configuration for Tiny Entities simulation
+# This file provides sensible defaults for most experiments
+
+world:
+  width: 100
+  height: 100
+  food_spawn_rate: 0.1
+  food_respawn_probability: 0.01
+  food_respawn_amount: 0.005
+  obstacle_density: 0.05
+  sound_decay_rate: 0.9
+
+creatures:
+  initial_count: 10
+  starting_health: 100.0
+  starting_energy: 100.0
+  perception_radius: 5
+  max_action_tokens: 50
+  initial_action_tokens: 10
+  energy_cost_per_step: 1.0
+  health_decay_when_no_energy: 0.1
+
+mood:
+  fast_learning_rate: 0.1    # Arousal learning
+  slow_learning_rate: 0.01   # Valence learning
+  arousal_decay: 0.99
+  initial_valence: 0.0
+  initial_arousal: 0.5
+
+actions:
+  acceptance_rate: 0.9
+  llm_action_probability: 0.2
+
+rewards:
+  surprise_multiplier: 0.5
+  food_reward: 1.0
+  social_sound_reward: 0.3
+  collision_penalty: -0.2
+  proximity_reward: 0.1
+
+analysis:
+  analyze_every: 500
+  sound_history_window: 50
+  rhythm_detection_threshold: 0.5
+
+# Simulation control
+max_steps: 10000
+random_seed: null  # Set to an integer for reproducible simulations
+log_level: INFO
