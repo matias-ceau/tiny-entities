@@ -43,7 +43,21 @@ See [docs/PHASE1_PROGRESS.md](docs/PHASE1_PROGRESS.md) for details.
 
 ## Quick Start
 
-### Setup
+### Installation
+
+**Option 1: Install as a Tool (Recommended)**
+
+```bash
+# Install with uv (recommended - fastest)
+uv tool install --editable .
+
+# Now you can run it from anywhere
+tiny-entities --help
+tiny-entities --visualize
+tiny-entities --config config/better_vis.yaml --visualize
+```
+
+**Option 2: Development Setup**
 
 ```bash
 # Using pip
@@ -109,36 +123,40 @@ This demonstrates console mode, visualization, and analysis tools in one go. Whe
 
 ### Run
 
-Basic simulation (console output):
-```bash
-# With uv (recommended)
-uv run python examples/basic_simulation.py --creatures 8 --steps 5000
+**Using the `tiny-entities` command (if installed with uv tool install):**
 
-# Or if you used pip
+```bash
+# Basic simulation (console output)
+tiny-entities --creatures 8 --steps 5000
+
+# With improved visualization (NEW! Shows internal thoughts & patterns)
+tiny-entities --visualize --config config/better_vis.yaml
+
+# Quick test
+tiny-entities --visualize --creatures 5 --steps 1000
+
+# Full help
+tiny-entities --help
+```
+
+**Controls when visualized:**
+- **SPACE** - Pause/Resume
+- **M** - Toggle internal thoughts panel (NEW!)
+- **P** - Toggle communication patterns panel (NEW!)
+- **H** - Toggle health/energy bars (NEW!)
+- **L** - Toggle legend
+- **ESC** - Quit
+
+**Alternative: Using Python directly:**
+
+```bash
+# Basic simulation
 python examples/basic_simulation.py --creatures 8 --steps 5000
 
-# Use a configuration preset (NEW!)
-uv run python examples/basic_simulation.py --config config/small.yaml
-```
+# With visualization
+python examples/basic_simulation.py --visualize --config config/better_vis.yaml
 
-With visualization (requires display):
-```bash
-# With uv (recommended)
-uv run python examples/basic_simulation.py --visualize --creatures 8
-
-# Or if you used pip
-python examples/basic_simulation.py --visualize --creatures 8
-
-# Quick test with small configuration (NEW!)
-uv run python examples/basic_simulation.py --visualize --config config/small.yaml
-```
-
-Headless mode (generates PNG snapshots):
-```bash
-# With uv (recommended)
-uv run python examples/headless_visualization.py --creatures 10 --steps 1000
-
-# Or if you used pip
+# Headless mode (generates PNG snapshots)
 python examples/headless_visualization.py --creatures 10 --steps 1000
 ```
 
