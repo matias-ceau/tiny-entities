@@ -54,7 +54,7 @@ class SimulationOrchestrator:
         # Configuration parameters
         if config:
             self.num_creatures = config.creatures.initial_count
-            self.max_steps = config.creatures.max_steps
+            self.max_steps = config.max_steps
             self.analyze_every = config.analysis.analyze_every
         else:
             self.num_creatures = 5
