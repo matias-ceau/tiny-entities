@@ -78,8 +78,7 @@ class SimulationOrchestrator:
                 action_config=self.config.actions
             )
         else:
-            world = SimpleWorld()
-            self.world_model = NonDeterministicWorldModel(world=world)
+            self.world_model = NonDeterministicWorldModel()
 
         # Create action selector
         self.action_selector = MoodInfluencedActionSelector()
