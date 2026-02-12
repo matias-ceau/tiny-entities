@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tiny Entities</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <span class="logo">🧬 Tiny Entities</span>
+    <div class="controls">
+      <button id="btn-start" onclick="startSim()">▶ Start</button>
+      <button id="btn-pause" onclick="pauseSim()" disabled>⏸ Pause</button>
+      <button id="btn-stop"  onclick="stopSim()"  disabled>⏹ Stop</button>
+    </div>
+    <div class="settings">
+      <label>Creatures <input id="inp-creatures" type="number" value="12" min="1" max="50"></label>
+      <label>Steps <input id="inp-steps" type="number" value="10000" min="100" step="1000"></label>
+    </div>
+    <div class="status-bar">
+      <span id="stat-step">Step: 0</span>
+      <span id="stat-alive">Alive: —</span>
+      <span id="stat-sounds">Sounds: 0</span>
+      <span id="stat-thoughts">Thoughts: 0</span>
+      <span id="stat-conn" class="conn-dot">●</span>
+    </div>
+  </header>
+
+  <!-- Main layout -->
+  <main>
+    <!-- World canvas -->
+    <section id="world-wrap">
+      <canvas id="world-canvas"></canvas>
+    </section>
+
+    <!-- Side panels -->
+    <aside id="panels">
+
+      <!-- Internal Thoughts panel -->
+      <div class="panel" id="panel-thoughts">
+        <div class="panel-title">💭 Internal Thoughts
+          <button class="toggle" onclick="togglePanel('thoughts')">−</button>
+        </div>
+        <div class="panel-body" id="thoughts-body">
+          <p class="empty-msg">No thoughts yet…</p>
+        </div>
+      </div>
+
+      <!-- Communication Patterns panel -->
+      <div class="panel" id="panel-patterns">
+        <div class="panel-title">🎵 Communication Patterns
+          <button class="toggle" onclick="togglePanel('patterns')">−</button>
+        </div>
+        <div class="panel-body" id="patterns-body">
+          <p class="empty-msg">Not enough data yet…</p>
+        </div>
+      </div>
+
+      <!-- Creature Status panel -->
+      <div class="panel" id="panel-creatures">
+        <div class="panel-title">🧬 Creature Status
+          <button class="toggle" onclick="togglePanel('creatures')">−</button>
+        </div>
+        <div class="panel-body" id="creatures-body">
+          <p class="empty-msg">No creatures yet…</p>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- Legend overlay -->
+  <div id="legend">
+    <div class="leg-row"><span class="swatch" style="background:#0f0f14"></span>Empty</div>
+    <div class="leg-row"><span class="swatch" style="background:#78dc50"></span>Food</div>
+    <div class="leg-row"><span class="swatch" style="background:#b4503c"></span>Obstacle</div>
+    <div class="leg-row"><span class="swatch" style="background:#fff;border:2px solid #555"></span>Creature</div>
+    <div class="leg-row"><span class="swatch" style="background:#5096ff;opacity:.6"></span>Low sound</div>
+    <div class="leg-row"><span class="swatch" style="background:#ff6464;opacity:.6"></span>High sound</div>
+  </div>
+
+  <script src="/static/sim.js"></script>
+</body>
+</html>

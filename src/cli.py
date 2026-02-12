@@ -17,110 +17,87 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  tiny-entities                              # Run with defaults
-  tiny-entities --visualize                  # Run with visualization
-  tiny-entities --config config/better_vis.yaml --visualize
-  tiny-entities --creatures 15 --steps 20000 --log-level DEBUG
+  tiny-entities                                    # Run headless
+  tiny-entities --visualize                        # pygame window
+  tiny-entities --web                              # Browser at http://localhost:8000
+  tiny-entities --web --port 9000                  # Different port
+  tiny-entities --config config/better_vis.yaml --web
+  tiny-entities --creatures 15 --steps 20000
 
-Controls (when visualized):
-  SPACE - Pause/Resume
-  ESC   - Quit
-  M     - Toggle internal thoughts panel
-  P     - Toggle communication patterns panel
-  H     - Toggle health/energy bars
-  L     - Toggle legend
+Browser controls:
+  Start / Pause / Stop buttons in the web UI
+  Side panels: Internal Thoughts, Communication Patterns, Creature Status
+
+pygame controls (--visualize):
+  SPACE  Pause/Resume  |  M  Thoughts  |  P  Patterns  |  H  Health  |  ESC  Quit
         """
     )
 
-    # Simulation parameters
-    parser.add_argument(
-        "--creatures",
-        type=int,
-        default=None,
-        help="Number of creatures (default: 10, or from config)"
-    )
-    parser.add_argument(
-        "--steps",
-        type=int,
-        default=None,
-        help="Maximum simulation steps (default: 10000, or from config)"
-    )
-    parser.add_argument(
-        "--analyze-every",
-        type=int,
-        default=None,
-        help="Steps between analysis (default: 500, or from config)"
-    )
+    parser.add_argument("--creatures",     type=int, default=None)
+    parser.add_argument("--steps",         type=int, default=None)
+    parser.add_argument("--analyze-every", type=int, default=None)
+    parser.add_argument("--config",        type=str, default=None)
 
-    # Configuration
-    parser.add_argument(
-        "--config",
-        type=str,
-        default=None,
-        help="Path to YAML configuration file"
-    )
+    # Run modes (mutually exclusive)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--visualize",    action="store_true", help="pygame window")
+    mode.add_argument("--web",          action="store_true", help="browser web app")
+    mode.add_argument("--no-visualize", action="store_true", help="headless (default)")
 
-    # Visualization
-    parser.add_argument(
-        "--visualize",
-        action="store_true",
-        help="Enable real-time visualization (requires pygame)"
-    )
-    parser.add_argument(
-        "--no-visualize",
-        dest="visualize",
-        action="store_false",
-        help="Disable visualization (headless mode)"
-    )
-
-    # Logging
-    parser.add_argument(
-        "--log-level",
-        type=str,
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Logging level (default: INFO)"
-    )
-    parser.add_argument(
-        "--log-file",
-        type=str,
-        default=None,
-        help="Log to file instead of console"
-    )
+    parser.add_argument("--host",      type=str, default="0.0.0.0", help="Web server host")
+    parser.add_argument("--port",      type=int, default=8000,      help="Web server port")
+    parser.add_argument("--log-level", type=str, default="INFO",
+                        choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    parser.add_argument("--log-file",  type=str, default=None)
 
     args = parser.parse_args()
 
-    # Setup logging
-    log_file_path = Path(args.log_file) if args.log_file else None
-    setup_logging(level=args.log_level, log_file=log_file_path)
+    setup_logging(level=args.log_level,
+                  log_file=Path(args.log_file) if args.log_file else None)
 
-    # Load configuration if provided
+    # Load config
     config = None
     if args.config:
-        config_path = Path(args.config)
-        if not config_path.exists():
-            print(f"Error: Configuration file not found: {args.config}", file=sys.stderr)
+        p = Path(args.config)
+        if not p.exists():
+            print(f"Error: config not found: {args.config}", file=sys.stderr)
             sys.exit(1)
+        config = SimulationConfig.from_yaml(p)
+        print(f"✓ Loaded config from {args.config}")
+
+    creatures     = args.creatures     or (config.creatures.initial_count if config else 10)
+    steps         = args.steps         or (config.max_steps                if config else 10000)
+    analyze_every = args.analyze_every or (config.analysis.analyze_every   if config else 500)
+
+    # ── WEB mode ──────────────────────────────────────────────────────────
+    if args.web:
         try:
-            config = SimulationConfig.from_yaml(config_path)
-            print(f"✓ Loaded configuration from {args.config}")
-        except Exception as e:
-            print(f"Error loading config: {e}", file=sys.stderr)
+            import uvicorn
+            from .web.server import app, start_sim
+        except ImportError:
+            print("❌ Web mode requires: pip install 'tiny-entities[web]'", file=sys.stderr)
             sys.exit(1)
 
-    # Determine final parameters (command-line overrides config)
-    creatures = args.creatures if args.creatures is not None else (10 if not config else config.creatures.initial_count)
-    steps = args.steps if args.steps is not None else (10000 if not config else config.max_steps)
-    analyze_every = args.analyze_every if args.analyze_every is not None else (500 if not config else config.analysis.analyze_every)
+        print(f"🌐 Tiny Entities Web App")
+        print(f"   Open http://localhost:{args.port} in your browser")
+        print(f"   Works on Android/mobile via your local network IP too!")
+        print(f"   Press Ctrl+C to stop\n")
 
-    # Create simulation
-    print(f"🧬 Tiny Entities Simulation")
-    print(f"   Creatures: {creatures}")
-    print(f"   Max steps: {steps}")
-    print(f"   Analysis frequency: every {analyze_every} steps")
-    if config:
-        print(f"   Config: {args.config}")
-    print()
+        from . web import server as srv
+        srv._auto_start = dict(creatures=creatures, steps=steps,
+                               config=args.config)
+
+        @app.on_event("startup")
+        async def _auto():
+            if getattr(srv, '_auto_start', None):
+                await start_sim(**srv._auto_start)
+
+        uvicorn.run(app, host=args.host, port=args.port,
+                    log_level=args.log_level.lower())
+        return
+
+    # ── PYGAME mode ───────────────────────────────────────────────────────
+    print(f"🧬 Tiny Entities  |  creatures={creatures}  steps={steps}")
 
     sim = EmergentLifeSimulation(
         num_creatures=creatures,
@@ -129,23 +106,17 @@ Controls (when visualized):
         config=config,
     )
 
-    # Run with or without visualization
     if args.visualize:
         try:
             from .simulation.visualization import SimulationVisualizer
-            print("🎨 Starting visualization...")
-            print("   Controls: SPACE=Pause | M=Thoughts | P=Patterns | H=Health | L=Legend | ESC=Quit")
-            print()
-            visualizer = SimulationVisualizer(sim)
-            asyncio.run(visualizer.run())
+            print("🎨 Visualization starting…")
+            print("   SPACE=Pause  M=Thoughts  P=Patterns  H=Health  ESC=Quit")
+            asyncio.run(SimulationVisualizer(sim).run())
         except ImportError as e:
-            print("❌ Visualization requires pygame.", file=sys.stderr)
-            print("   Install with: pip install pygame", file=sys.stderr)
-            print(f"   Error: {e}", file=sys.stderr)
+            print(f"❌ pygame required: pip install pygame\n   {e}", file=sys.stderr)
             sys.exit(1)
     else:
-        print("🏃 Running headless simulation...")
-        print()
+        print("🏃 Running headless…")
         asyncio.run(sim.run_simulation())
 
 
