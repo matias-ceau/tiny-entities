@@ -1,0 +1,1 @@
+"""Tiny Entities web app."""

@@ -23,6 +23,10 @@ dependencies = [
 tiny-entities = "src.cli:main"
 
 [project.optional-dependencies]
+web = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",

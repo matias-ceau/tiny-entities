@@ -398,16 +398,27 @@ class EnhancedBrain:
         if not self.llm_client:
             return ""
 
-        context_summary = json.dumps(
-            {
-                "perception": perception,
-                "outcome": outcome,
-                "mood": {
-                    "valence": self.mood_system.valence,
-                    "arousal": self.mood_system.arousal,
-                },
-            }
-        )
+        # Convert numpy arrays to lists for JSON serialization
+        def convert_for_json(obj):
+            """Recursively convert numpy arrays to lists."""
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, dict):
+                return {k: convert_for_json(v) for k, v in obj.items()}
+            elif isinstance(obj, (list, tuple)):
+                return [convert_for_json(item) for item in obj]
+            return obj
+
+        serializable_data = {
+            "perception": convert_for_json(perception),
+            "outcome": convert_for_json(outcome),
+            "mood": {
+                "valence": self.mood_system.valence,
+                "arousal": self.mood_system.arousal,
+            },
+        }
+
+        context_summary = json.dumps(serializable_data)
 
         response = self.llm_client.generate_reflection(
             self.creature_id,
