@@ -11,6 +11,22 @@ if TYPE_CHECKING:
     from ..world.physics import SimpleWorld
 
 
+def _random_coordinate_with_margin(limit: int, preferred_margin: int = 10) -> int:
+    """Return a random coordinate while preferring to avoid world edges."""
+    if limit <= 1:
+        return 0
+
+    margin = min(preferred_margin, max(0, (limit - 1) // 2))
+    low = margin
+    high = limit - margin
+
+    if high <= low:
+        low = 0
+        high = limit
+
+    return np.random.randint(low, high)
+
+
 def create_creatures(
     num: int,
     world: 'SimpleWorld',
@@ -34,10 +50,9 @@ def create_creatures(
     creatures = []
 
     for i in range(num):
-        # Random starting position (avoid edges)
-        margin = 10
-        x = np.random.randint(margin, world.width - margin)
-        y = np.random.randint(margin, world.height - margin)
+        # Random starting position (prefer avoiding edges where possible)
+        x = _random_coordinate_with_margin(world.width)
+        y = _random_coordinate_with_margin(world.height)
 
         # Create enhanced brain with configurations
         # Note: LLM client is obtained via get_llm_client() internally
